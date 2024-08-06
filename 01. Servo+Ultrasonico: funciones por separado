@@ -1,0 +1,108 @@
+/*--- CODIGO DE PRUEBA 01 ---
+OBJETIVO:
+Hacer funcionar por separado:
+- Sensor ultrasonico
+- Servomotor SG90
+
+CONEXIONES:
+- VCC: Ultrasonico Y Servo
+- GND: Ultrasonico Y Servo
+- ECHO (ultrasonico)
+- TRIGGER (ultrasonico)
+- Pin de señal (servo)
+
+*///---------------------------------------------------------------------
+
+//VARIABLES PARA SERVOMOTOR SG90 FRONTAL
+  //incluyo libreria para control del servo
+  #include <Servo.h>
+  //creamos un servo y le ponemos nombre
+  Servo servoFrontal;
+  //::PIN:: para conectar el cable SEÑAL del servo a ARD
+  int pinServoFrontal = 3;
+  //valores para mapeo de angulo de SERVOS SG90 (azules pequeños)
+  int sgMin = 510;
+  int sgMax = 2360;
+
+//VARIABLES PARA SENSOR ULTRASONICO
+  //::PINES:: ARD para terminales ECHO y TRIG del sensor
+  int echo = 8;
+  int trig = 9;
+
+  //variables para calculo matematico de distancia
+    //se usan en la funcion
+    float duracion;
+    float distancia;
+    //recepciona el return de la funcion
+    float DISTANCIA;
+
+  //tiempo de retardo (mili seg) para leer las distanicas
+  int tiempo = 300;
+
+void setup() {
+  //inicializo servo con "pinARD, valorMin, valorMax" (definidos en variables)
+  servoFrontal.attach(pinServoFrontal, sgMin, sgMax);
+
+  //inicializo comunicacion con puerto serial
+  Serial.begin(9600);
+  //definimos funcionamiento de los pines ECHO y TRIG
+  pinMode(echo, INPUT);
+  pinMode(trig, OUTPUT);
+}
+
+void loop() {
+  DISTANCIA = medirDistancia();
+  //imprimo distancia en puerto serial
+    Serial.print(DISTANCIA);
+    Serial.println(" cm.");
+    delay(tiempo);
+
+  rotarServo();
+}
+
+
+//-------------ZONA DE FUNCIONES--------------------
+
+//funcion para ULTRASONICO, medir distancia, retorna valor "float"
+float medirDistancia(){
+  //enviamos pulso intermitente (cada 1ms) por el TRIG...
+  digitalWrite(trig, HIGH);
+  delay(1);
+  digitalWrite(trig, LOW);
+
+  //tomamos el tiempo (duracion) que le toma al pulso salir de TRIG y volver a ECHO
+  duracion = pulseIn(echo, HIGH);
+
+  //calculamos la distancia en funcio del tiempo de recepcion
+  distancia = duracion / 58.2;
+
+  return distancia;
+}
+
+//funcion para SERVO, rotacion suave de 0º a 180º
+void rotarServo(){
+  //variable para valor de angulo cambiante
+  int angulo;
+
+  //variable para incremento de angulo
+  int salto = 5;
+  //variable para lapso intermitente de incremento
+  int lapso = 20;
+  //tiempo de pausa para alternar IDA y VUELTA
+  int pausa = 100;
+
+  //IDA... (INICIAL = 0º ; HASTA = 180º ; INCREMENTO = salto)
+  for (angulo = 0; angulo <= 180; angulo += salto){
+    servoFrontal.write(angulo);
+    delay(lapso);
+  }
+  //tiempo de pausa (ver variables)
+  delay(pausa);
+  //VUELTA... (INICIAL = 180º ; HASTA = 0º ; INCREMENTO = salto)
+  for (angulo = 180; angulo >= 0; angulo -= salto){
+    servoFrontal.write(angulo);
+    delay(lapso);
+  }
+  //tiempo de pausa (ver variables)
+  delay(pausa);
+}
