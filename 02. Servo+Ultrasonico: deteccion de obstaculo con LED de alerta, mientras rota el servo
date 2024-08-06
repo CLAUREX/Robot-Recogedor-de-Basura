@@ -1,0 +1,157 @@
+/*--- CODIGO DE PRUEBA 02 ---
+OBJETIVO:
+Funcionamiento conjunto de un SERVOMOTOR y un ULTRASONICO
+De tal forma que se el servo se detenga en cuanto se detecte una distancia menor a 20cm
+y que prosiga desde su posicion en cuento el obstaculo "se quite".
+
+CONEXIONES:
+- VCC: Ultrasonico Y Servo
+- GND: Ultrasonico Y Servo
+- ECHO (ultrasonico)
+- TRIGGER (ultrasonico)
+- Pin de señal (servo)
+
+*///---------------------------------------------------------------------
+
+//VARIABLES PARA SERVOMOTOR SG90 FRONTAL
+  //incluyo libreria para control del servo
+  #include <Servo.h>
+  //creamos un servo y le ponemos nombre
+  Servo servoFrontal;
+  //::PIN:: para conectar el cable SEÑAL del servo a ARD
+  int pinServoFrontal = 3;
+  //valores para mapeo de angulo de SERVOS SG90 (azules pequeños)
+  int sgMin = 510;
+  int sgMax = 2360;
+
+//VARIABLES PARA SENSOR ULTRASONICO
+  //::PINES:: ARD para terminales ECHO y TRIG del sensor
+  int echo = 8;
+  int trig = 9;
+
+  //variables para calculo matematico de distancia
+    //se usan en la funcion
+    float duracion;
+    float distancia;
+    //recepciona el return de la funcion
+    float DISTANCIA;
+
+  //tiempo de retardo (mili seg) para leer las distanicas
+  int tiempo = 300;
+
+//VARIABLES PARA FUNCION "PARPADEAR LED"
+  //pin de ubicacion de LED
+  int ledAviso = 13;
+
+void setup() {
+  //inicializo servo con "pinARD, valorMin, valorMax" (definidos en variables)
+  servoFrontal.attach(pinServoFrontal, sgMin, sgMax);
+
+  //inicializo comunicacion con puerto serial
+  Serial.begin(9600);
+  //definimos funcionamiento de los pines ECHO y TRIG
+  pinMode(echo, INPUT);
+  pinMode(trig, OUTPUT);
+
+  //defino como SALIDA el led de aviso de proximidad
+  pinMode(ledAviso, OUTPUT);
+}
+
+void loop() {
+  DISTANCIA = medirDistancia();
+  //imprimo distancia en puerto serial
+    Serial.print(DISTANCIA);
+    Serial.println(" cm.");
+    delay(tiempo);
+
+  if (rotarServo() == false){
+    Serial.println("Continua");
+  }
+}
+
+
+//-------------ZONA DE FUNCIONES--------------------
+
+//funcion para ULTRASONICO, medir distancia, retorna valor "float"
+float medirDistancia(){
+  //enviamos pulso intermitente (cada 1ms) por el TRIG...
+  digitalWrite(trig, HIGH);
+  delay(1);
+  digitalWrite(trig, LOW);
+
+  //tomamos el tiempo (duracion) que le toma al pulso salir de TRIG y volver a ECHO
+  duracion = pulseIn(echo, HIGH);
+
+  //calculamos la distancia en funcio del tiempo de recepcion
+  distancia = duracion / 58.2;
+
+  return distancia;
+}
+
+//funcion parLED: encender y apagar intermitente
+void parpadearLed(){
+  //tiempo de parpadeo
+  int tiempoParpadeo = 200;
+
+  digitalWrite(ledAviso, HIGH);
+  delay(tiempoParpadeo);
+  digitalWrite(ledAviso, LOW);
+  delay(tiempoParpadeo);
+}
+
+//funcion para SERVO, rotacion suave de 0º a 180º
+bool rotarServo(){
+  //variable para valor de angulo cambiante
+  int angulo;
+
+  //variable para incremento de angulo
+  int salto = 5;
+  //variable para lapso intermitente de incremento
+  int lapso = 20;
+  //tiempo de pausa para alternar IDA y VUELTA
+  int pausa = 100;
+
+  //distancia de quibre y alerta
+  int distanciaAlerta = 20;
+
+  //------------------------------------------------------------------------------------------
+
+  //IDA... (INICIAL = 0º ; HASTA = 180º ; INCREMENTO = salto)
+  for (angulo = 0; angulo <= 180; angulo += salto){
+    servoFrontal.write(angulo);
+
+    //si la medida tomada es menor a "distanciaAlerta" (ver variable)
+    while (medirDistancia() <= distanciaAlerta){
+      Serial.println("¡ALERTA!");
+      servoFrontal.write(angulo);
+      parpadearLed();
+      delay(10);
+    }
+
+    //tiempo intermitente para la iteracion de angulo (ver variables)
+    delay(lapso);
+  }
+
+  //tiempo de pausa (ver variables)
+  delay(pausa);
+
+  //VUELTA... (INICIAL = 180º ; HASTA = 0º ; INCREMENTO = salto)
+  for (angulo = 180; angulo >= 0; angulo -= salto){
+    servoFrontal.write(angulo);
+
+    //si la medida tomada es menor a "distanciaAlerta"
+    while (medirDistancia() <= distanciaAlerta){
+      //mensaje de alerta
+      Serial.println("¡ALERTA!");
+      servoFrontal.write(angulo);
+      parpadearLed();
+      delay(10);
+    }
+
+    //tiempo intermitente para la iteracion de angulo (ver variables)
+    delay(lapso);
+  }
+
+  //tiempo de pausa (ver variables)
+  delay(pausa);
+}
