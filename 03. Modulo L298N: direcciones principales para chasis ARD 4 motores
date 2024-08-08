@@ -1,0 +1,151 @@
+/* --- CODIGO DE PRUEBA 03 ---
+FUNCIONAMIENTO DE MOTORES DC CON MODULO L298N
+
+ ---- Detalles de modulo L289N ----
+Alimentacion: 3 - 35 voltios // max. 2 amperios
+  La parte logica consume 3 voltios, asi que el voltaje que llegue a los motores será:
+  voltajeMotor = voltajeFuente - 3 voltios
+
+¡¡¡ADVERTENCIA!!!
+Para alimentacion de:
+  Entre 5.0 a 11.9 voltios: colocar el JUMPER. Otorga salida de 5V en el pin del modulo.
+  Entre 12 a 35 voltios: RETIRAR EL JUMPER, peligro de sobrecarga. Inhabilita salida 5V.
+
+Los tres terminales azules frontales son, de izq a der:
+  VIN: entrada alimentacion (5 a 35V, ver ADVERTENCIA)
+  GND: tierra (debe ir conectada con la tierra de ARD)
+  +5V: suministra 5V segun el voltaje de VIN (ver ADVERTENCIA)
+
+Los 6 pines en zona frontal izquierda son, de izq a der:
+  ENA y ENB (par de pines verticales laterales) {control opcional por ARD}
+      Habilitan MOTOR A y MOTOR B, graduan su velocidad segun el valor logico que llegue al pin inferior.
+      El pin superior suministra 5V. Si se deja el jumper, se enviará la maxima potencia a los motores.
+      Si se quita el jumper, puede controlarse la potencia enviando desde ARD:
+        0 (0 analogico) a 255 (5V analogico) en el pin inferior.
+
+  IN1, IN2: controlan sentido de giro del MOTOR A {se conectan a ARD}
+  IN3, IN4: controlan sentido de giro del MOTOR B {se conectan a ARD}
+
+Pares laterales de terminales azules: conectan a los motores
+  MOTOR A: par izquierda
+  MOTOR B: par derecha
+
+*///------------------------------------------------------------------------------------------------------
+
+//variables con conexion: MODULO - ARDUINO
+  //control MOTOR A
+  int IN1 = 2;
+  int IN2 = 3;
+  int ENA = 5;    //control opcinal de velocidad
+  //contro MOTOR B
+  int IN3 = 7;
+  int IN4 = 8;
+  int ENB = 9;    //control opcinal de velocidad
+
+//variables DE CONTROL de motores
+  //coloca de 0 a 255, donde: (0 = 0voltios) Y (255 = [voltajeFuente - 3])
+  int velocidad = 100;     //min 70 (para pruebas al aire)
+  int velocidadGiro = 120;    //mayor a la velocidad normal por la rotacion del carro (friccion ruedas - piso)
+  //tiempo de ejecucion de los movimientos
+  int duracionAccion = 2000;
+  //tiempo de espera para el siguiente movimiento
+  int duracionPausa = 2000;
+
+void setup() {
+  //todos los pines como salida
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(ENA, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  pinMode(ENB, OUTPUT);
+}
+
+void loop() {
+  //le paso variables "velocidad" y "duracion" (ver "variables DE CONTROL")
+
+  avanzar(velocidad);
+  delay(duracionAccion);
+    detener();
+    delay(duracionPausa);
+
+  giraDerecha(velocidadGiro);
+  delay(duracionAccion);
+    detener();
+    delay(duracionPausa);
+
+  retroceder(velocidad);
+  delay(duracionAccion);
+    detener();
+    delay(duracionPausa);
+
+  giraIzquierda(velocidadGiro);
+  delay(duracionAccion);
+    detener();
+    delay(duracionPausa);
+}
+
+
+//---------FUNCIONES DIRECCIONALES------------
+
+//funcion DETENER (TODOS los motores apagados)
+void detener(){
+  digitalWrite(ENA, LOW);
+  digitalWrite(ENB, LOW);
+}
+
+//funcion AVANZAR {referencial}(TODAS las ruedas en el mismo sentido "-->")
+void avanzar(int velocidad){
+  //MOTOR A
+  analogWrite(ENA, velocidad);
+  //orden de giro
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+  //MOTOR B
+  analogWrite(ENB, velocidad);
+  //orden de giro
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+}
+
+//funcion RETROCEDER {referencial}(TODAS las ruedas en el mismo sentido "<--")
+void retroceder(int velocidad){
+  //MOTOR A
+  analogWrite(ENA, velocidad);
+  //orden de giro
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  //MOTOR B
+  analogWrite(ENB, velocidad);
+  //orden de giro
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+}
+
+//funcion IZQUIERDA {referencial}(par izquierdo RETROCEDE - par derecho AVANZA)
+void giraIzquierda(int velocidad){
+  //MOTOR A
+  analogWrite(ENA, velocidad);
+  //orden de giro
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+  //MOTOR B
+  analogWrite(ENB, velocidad);
+  //orden de giro
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+}
+
+//funcion DERECHA {referencial}(par izquierdo AVANZA - par derecho RETROCEDE)
+void giraDerecha(int velocidad){
+  //MOTOR A
+  analogWrite(ENA, velocidad);
+  //orden de giro
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  //MOTOR B
+  analogWrite(ENB, velocidad);
+  //orden de giro
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+}
