@@ -1,0 +1,103 @@
+/* --- CODIGO DE PRUEBA 04 ---
+RANGOS OPERATIVOS DE SERVOS EN EL BRAZO ROBOTICO
+
+OBJETIVO:
+Determinar el Maximo y Minimo angulo de cada uno de los servos que tiene el brazo robot.
+Saber el alcanze Max y Min de cada grado de libertad.
+
+SOBRE EL BRAZO ROBOT: ...
+1) Usa Servomotores "MG995 High Speed Servo Actuador"
+Peso: 55g
+Voltaje: 4.8 - 7.2 voltios
+
+VOLT  Corriente(min)  Corriente(max)    TORQUE (kgf.cm)  VELOCIDAD (s/60º)
+4.8   8.8 mA          350 mA            8.5              0.2
+6.0   9.1 mA          450 mA            10               0.16
+
+2) Tiene 04 grados de libertad (servos)
+NombreServo    Funcion                                                         Libertad
+BASE           Rota en su propio eje todo el brazo hacia izquierda/derecha     00º brazoDerecha - 180º brazoIzquierda
+BRAZO          Estira el brazo hacia adelante/atras                            00º estiraMax - 167º retraeMax
+MANO           "Muñequea" la pinza hacia adelante/atras                        30º maxExtension - 157º maxFlexion
+PINZA          Abre/cierra la pinza                                            87º maxAbierto - 166º maxCerrado
+
+CONEXIONES:
+Para alimentar los servos, uso un modulo L298N y una bateria de taladro de 12 voltios.
+Necesito 5.5 voltios promedio en los terminales MOTOR A y MOTOR B (laterales azules)
+Hay que: ...
+- Modular el voltaje mediante ENA y ENB para que lleguen 5.5 voltios a los terminales
+- Fijar IN1 y IN4 en HIGH
+- Fijar IN2 y IN3 en LOW
+
+
+*///-----------------------------------------------------------------------------------------------------
+
+//libreria para control de servomotores
+  #include <Servo.h>
+
+//creo 04 objetos servo usando los nombres de los grados de libertad
+  Servo BASE, BRAZO, MANO, PINZA;
+
+//:::PINES::: para conectar los cables de señal de c/servo
+  int pinBASE = 8;
+  int pinBRAZO = 9;
+  int pinMANO = 10;
+  int pinPINZA = 11;
+
+//:::> variables PULSOMIN y PULSOMAX según el servo
+  //pulso para limite fisico de 0º (estandar 1000)
+  int PULSOMIN = 600; //max en sentido ¿¿¿horario (hacia la derecha)???
+  //pulso para limite fisica de 180º (estandar 2000)
+  int PULSOMAX = 2300;  //max en sentido ¿¿¿anti-horario (hacia la izquierda)???
+
+//tiempo pausa entre movimientos
+  int tiempo = 1500;
+
+//:::PINES::: para conexion del ARD<->L298N
+  //control MOTOR A
+  //int IN1 = 2;
+  //int IN2 = 3;
+  //int ENA = 5;    //control voltaje que llega a los motores
+  //control salida MOTOR B
+  int IN3 = 5;
+  int IN4 = 6;
+  int ENB = 7;    //control voltaje que llega a los motores
+
+//variables DE CONTROL de motores
+  //coloca de 0 a 255, donde: (0 = 0voltios) Y (255 = [voltajeFuente - 3])
+  //{se le envia ENA y ENB}
+  int potencia = 150;
+
+
+void setup() {
+  //iniciliza servos
+    //[nombreServo].attach([pin ARD del cable señal], [valor pulso minimo (en micro seg)], [valor pulso maximo (en micro seg)]);
+    BASE.attach(pinBASE, PULSOMIN, PULSOMAX);
+    BRAZO.attach(pinBRAZO, PULSOMIN, PULSOMAX);
+    MANO.attach(pinMANO, PULSOMIN, PULSOMAX);
+    PINZA.attach(pinPINZA, PULSOMIN, PULSOMAX);
+
+  //todos los pines al L298N como salida
+    //pinMode(ENA, OUTPUT);
+      //analogWrite(ENA, potencia);
+    //pinMode(IN1, OUTPUT);
+      //digitalWrite(IN1, HIGH);  //FIJO
+    //pinMode(IN2, OUTPUT);
+      //digitalWrite(IN2, LOW);   //FIJO
+
+    pinMode(ENB, OUTPUT);
+      analogWrite(ENB, potencia);
+    pinMode(IN3, OUTPUT);
+      digitalWrite(IN3, LOW);     //FIJO
+    pinMode(IN4, OUTPUT);
+      digitalWrite(IN4, HIGH);    //FIJO
+}
+
+void loop() {
+  //orden de posicionamiento
+  //[nombreServo].write([angulo])
+  MANO.write(30);
+  delay(tiempo);
+  MANO.write(157);
+  delay(tiempo);
+}
